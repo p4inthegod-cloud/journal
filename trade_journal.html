@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дневник сделок | SMC Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --card: #161616;
+    --border: #242424;
+    --accent-green: #00ff87;
+    --accent-red: #ff3d5a;
+    --accent-yellow: #ffd166;
+    --text: #f0f0f0;
+    --muted: #555;
+    --muted2: #888;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,255,135,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 40px;
+    animation: fadeIn 0.5s ease both;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent-green);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-title {
+    font-size: clamp(36px, 8vw, 56px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+  }
+
+  .header-title .green { color: var(--accent-green); }
+
+  .header-sub {
+    font-size: 14px;
+    color: var(--muted2);
+    font-weight: 400;
+  }
+
+  /* Direction toggle */
+  .direction-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .dir-btn {
+    padding: 18px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--muted2);
+    letter-spacing: 1px;
+  }
+
+  .dir-btn.long.active {
+    border-color: var(--accent-green);
+    background: rgba(0,255,135,0.08);
+    color: var(--accent-green);
+    box-shadow: 0 0 24px rgba(0,255,135,0.1);
+  }
+
+  .dir-btn.short.active {
+    border-color: var(--accent-red);
+    background: rgba(255,61,90,0.08);
+    color: var(--accent-red);
+    box-shadow: 0 0 24px rgba(255,61,90,0.1);
+  }
+
+  /* Field groups */
+  .field-group {
+    margin-bottom: 14px;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .field-label .req {
+    color: var(--accent-green);
+    font-size: 14px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    padding: 13px 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(0,255,135,0.4);
+    box-shadow: 0 0 0 3px rgba(0,255,135,0.06);
+  }
+
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+
+  select option { background: #1a1a1a; }
+
+  textarea { resize: vertical; min-height: 88px; }
+
+  /* Three columns for entry/stop/take */
+  .triple {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Result row */
+  .result-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Outcome selector */
+  .outcome-wrap {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .outcome-btn {
+    padding: 12px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    text-align: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--muted2);
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .outcome-btn.win.active {
+    border-color: var(--accent-green);
+    background: rgba(0,255,135,0.08);
+    color: var(--accent-green);
+  }
+
+  .outcome-btn.loss.active {
+    border-color: var(--accent-red);
+    background: rgba(255,61,90,0.08);
+    color: var(--accent-red);
+  }
+
+  .outcome-btn.be.active {
+    border-color: var(--accent-yellow);
+    background: rgba(255,209,102,0.08);
+    color: var(--accent-yellow);
+  }
+
+  /* Concept chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    padding: 7px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted2);
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .chip.active {
+    border-color: var(--accent-green);
+    background: rgba(0,255,135,0.08);
+    color: var(--accent-green);
+  }
+
+  /* Image upload */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--card);
+    position: relative;
+  }
+
+  .upload-area:hover {
+    border-color: rgba(0,255,135,0.3);
+    background: rgba(0,255,135,0.03);
+  }
+
+  .upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+  }
+
+  .upload-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+  .upload-text { font-size: 14px; color: var(--muted2); }
+  .upload-text strong { color: var(--accent-green); }
+
+  .preview-img {
+    width: 100%;
+    border-radius: 6px;
+    margin-top: 12px;
+    display: none;
+    max-height: 240px;
+    object-fit: cover;
+  }
+
+  /* Section divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 20px;
+  }
+
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent-green);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 48px rgba(0,255,135,0.2);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.5;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  /* Success screen */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 80px 20px;
+    animation: fadeIn 0.5s ease both;
+  }
+
+  .success-screen.visible { display: block; }
+
+  .success-circle {
+    width: 80px;
+    height: 80px;
+    background: rgba(0,255,135,0.1);
+    border: 2px solid var(--accent-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 28px;
+    animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+
+  .success-title {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--accent-green);
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+  }
+
+  .success-sub {
+    color: var(--muted2);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .btn-new {
+    display: inline-block;
+    padding: 14px 40px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .btn-new:hover {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 480px) {
+    .triple { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">📈</div>
+      <span class="logo-text">SMC Journal</span>
+    </div>
+    <h1 class="header-title">Новая<br><span class="green">сделка</span></h1>
+    <p class="header-sub">Заполни сразу после закрытия позиции</p>
+  </div>
+
+  <!-- Form -->
+  <div id="formWrap">
+
+    <!-- Имя ученика -->
+    <div class="field-group" style="animation-delay:0.05s">
+      <div class="field-label">Твоё имя <span class="req">*</span></div>
+      <input type="text" id="studentName" placeholder="Иван Петров">
+    </div>
+
+    <!-- Инструмент -->
+    <div class="field-group" style="animation-delay:0.08s">
+      <div class="field-label">Инструмент <span class="req">*</span></div>
+      <input type="text" id="instrument" placeholder="BTC/USDT, EUR/USD, GOLD...">
+    </div>
+
+    <!-- Направление -->
+    <div class="field-group" style="animation-delay:0.1s">
+      <div class="field-label">Направление <span class="req">*</span></div>
+      <div class="direction-toggle">
+        <div class="dir-btn long" onclick="selectDir('long')">▲ LONG</div>
+        <div class="dir-btn short" onclick="selectDir('short')">▼ SHORT</div>
+      </div>
+    </div>
+
+    <!-- Точка входа / Стоп / Тейк -->
+    <div class="field-group" style="animation-delay:0.13s">
+      <div class="field-label">Уровни позиции <span class="req">*</span></div>
+      <div class="triple">
+        <div>
+          <input type="number" id="entry" placeholder="Вход" step="any">
+        </div>
+        <div>
+          <input type="number" id="stop" placeholder="Стоп" step="any">
+        </div>
+        <div>
+          <input type="number" id="take" placeholder="Тейк" step="any">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <div style="flex:1;text-align:center;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Вход</div>
+        <div style="flex:1;text-align:center;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Стоп</div>
+        <div style="flex:1;text-align:center;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Тейк</div>
+      </div>
+    </div>
+
+    <!-- Концепция входа -->
+    <div class="field-group" style="animation-delay:0.16s">
+      <div class="field-label">Концепция входа <span class="req">*</span></div>
+      <div class="chips" id="conceptChips">
+        <div class="chip" onclick="toggleChip(this)">BOS</div>
+        <div class="chip" onclick="toggleChip(this)">CHoCH</div>
+        <div class="chip" onclick="toggleChip(this)">FVG</div>
+        <div class="chip" onclick="toggleChip(this)">Liquidity Sweep</div>
+        <div class="chip" onclick="toggleChip(this)">OB</div>
+        <div class="chip" onclick="toggleChip(this)">Swing H/L</div>
+        <div class="chip" onclick="toggleChip(this)">Imbalance</div>
+        <div class="chip" onclick="toggleChip(this)">PDH/PDL</div>
+        <div class="chip" onclick="toggleChip(this)">Top-Down</div>
+      </div>
+    </div>
+
+    <!-- Описание причины -->
+    <div class="field-group" style="animation-delay:0.18s">
+      <div class="field-label">Почему вошёл — своими словами</div>
+      <textarea id="reason" placeholder="Опиши сетап: что увидел на HTF, где был CHoCH, откуда ждал вход..."></textarea>
+    </div>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-label">Результат</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- Итог сделки -->
+    <div class="field-group" style="animation-delay:0.2s">
+      <div class="field-label">Итог <span class="req">*</span></div>
+      <div class="outcome-wrap">
+        <div class="outcome-btn win" onclick="selectOutcome('win')">✅ ПРОФИТ</div>
+        <div class="outcome-btn loss" onclick="selectOutcome('loss')">❌ УБЫТОК</div>
+        <div class="outcome-btn be" onclick="selectOutcome('be')">➖ БУ</div>
+      </div>
+    </div>
+
+    <!-- RR и P&L -->
+    <div class="field-group" style="animation-delay:0.22s">
+      <div class="field-label">Результат в цифрах</div>
+      <div class="result-row">
+        <div>
+          <input type="number" id="rr" placeholder="RR (напр. 2.5)" step="0.1">
+        </div>
+        <div>
+          <input type="text" id="pnl" placeholder="P&L (напр. +$120)">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <div style="flex:1;text-align:center;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Risk/Reward</div>
+        <div style="flex:1;text-align:center;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Профит / Убыток</div>
+      </div>
+    </div>
+
+    <!-- Скрин графика -->
+    <div class="field-group" style="animation-delay:0.24s">
+      <div class="field-label">Скрин графика</div>
+      <div class="upload-area" id="uploadArea">
+        <input type="file" id="chartFile" accept="image/*" onchange="previewImage(this)">
+        <span class="upload-icon">📷</span>
+        <div class="upload-text">Нажми или перетащи скрин<br><strong>JPG, PNG, WEBP</strong></div>
+        <img class="preview-img" id="previewImg">
+      </div>
+    </div>
+
+    <!-- Ошибки и заметки -->
+    <div class="field-group" style="animation-delay:0.26s">
+      <div class="field-label">Ошибки и заметки</div>
+      <textarea id="notes" placeholder="Что сделал не так? Что стоило сделать иначе? Что заметил после закрытия..."></textarea>
+    </div>
+
+    <!-- Submit -->
+    <button class="submit-btn" id="submitBtn" onclick="submitTrade()">
+      <span id="btnText">Записать сделку →</span>
+    </button>
+
+  </div>
+
+  <!-- Success screen -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-circle">✓</div>
+    <div class="success-title">Записано!</div>
+    <p class="success-sub">Сделка отправлена ментору в Telegram.<br>Хорошая работа — дисциплина решает.</p>
+    <button class="btn-new" onclick="resetForm()">+ Добавить ещё сделку</button>
+  </div>
+
+</div>
+
+<script>
+  const BOT_TOKEN = '8640260311:AAEkfg8lO3rb0XJxjEz7PVe0o4T7osmgFvk';
+  const CHAT_ID = '6746369295';
+
+  let selectedDir = '';
+  let selectedOutcome = '';
+  let selectedConcepts = [];
+  let imageBase64 = null;
+  let imageFileObj = null;
+
+  function selectDir(dir) {
+    selectedDir = dir;
+    document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.dir-btn.${dir}`).classList.add('active');
+  }
+
+  function selectOutcome(outcome) {
+    selectedOutcome = outcome;
+    document.querySelectorAll('.outcome-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.outcome-btn.${outcome}`).classList.add('active');
+  }
+
+  function toggleChip(el) {
+    el.classList.toggle('active');
+    const val = el.textContent.trim();
+    if (el.classList.contains('active')) {
+      selectedConcepts.push(val);
+    } else {
+      selectedConcepts = selectedConcepts.filter(c => c !== val);
+    }
+  }
+
+  function previewImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    imageFileObj = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      imageBase64 = e.target.result.split(',')[1];
+      const img = document.getElementById('previewImg');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.querySelector('.upload-icon').style.display = 'none';
+      document.querySelector('.upload-text').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const outcomeLabels = { win: '✅ ПРОФИТ', loss: '❌ УБЫТОК', be: '➖ Безубыток' };
+  const dirLabels = { long: '▲ LONG', short: '▼ SHORT' };
+
+  async function submitTrade() {
+    const name = document.getElementById('studentName').value.trim();
+    const instrument = document.getElementById('instrument').value.trim();
+    const entry = document.getElementById('entry').value.trim();
+    const stop = document.getElementById('stop').value.trim();
+    const take = document.getElementById('take').value.trim();
+    const reason = document.getElementById('reason').value.trim();
+    const rr = document.getElementById('rr').value.trim();
+    const pnl = document.getElementById('pnl').value.trim();
+    const notes = document.getElementById('notes').value.trim();
+
+    if (!name || !instrument || !selectedDir || !entry || !selectedOutcome) {
+      alert('Заполни обязательные поля: имя, инструмент, направление, вход и итог');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    btn.disabled = true;
+    btnText.textContent = 'Отправляем...';
+
+    const now = new Date();
+    const dateStr = now.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    let msg = `📊 *НОВАЯ СДЕЛКА*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `👤 Ученик: *${name}*\n`;
+    msg += `🕐 ${dateStr}\n\n`;
+    msg += `*Инструмент:* ${instrument}\n`;
+    msg += `*Направление:* ${dirLabels[selectedDir] || selectedDir}\n\n`;
+    msg += `*📍 Уровни:*\n`;
+    msg += `  Вход: \`${entry || '—'}\`\n`;
+    msg += `  Стоп: \`${stop || '—'}\`\n`;
+    msg += `  Тейк: \`${take || '—'}\`\n\n`;
+    msg += `*💡 Концепция:* ${selectedConcepts.length ? selectedConcepts.join(', ') : '—'}\n\n`;
+    if (reason) msg += `*📝 Причина входа:*\n${reason}\n\n`;
+    msg += `*🎯 Итог:* ${outcomeLabels[selectedOutcome] || selectedOutcome}\n`;
+    if (rr) msg += `*RR:* ${rr}\n`;
+    if (pnl) msg += `*P&L:* ${pnl}\n`;
+    if (notes) msg += `\n*⚠️ Ошибки/заметки:*\n${notes}`;
+
+    try {
+      if (imageBase64 && imageFileObj) {
+        // Send photo with caption
+        const formData = new FormData();
+        formData.append('chat_id', CHAT_ID);
+        formData.append('photo', imageFileObj);
+        formData.append('caption', msg);
+        formData.append('parse_mode', 'Markdown');
+
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: msg,
+            parse_mode: 'Markdown'
+          })
+        });
+      }
+
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('successScreen').classList.add('visible');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch(e) {
+      alert('Ошибка отправки. Проверь интернет-соединение.');
+      console.error(e);
+      btn.disabled = false;
+      btnText.textContent = 'Записать сделку →';
+    }
+  }
+
+  function resetForm() {
+    document.getElementById('studentName').value = '';
+    document.getElementById('instrument').value = '';
+    document.getElementById('entry').value = '';
+    document.getElementById('stop').value = '';
+    document.getElementById('take').value = '';
+    document.getElementById('reason').value = '';
+    document.getElementById('rr').value = '';
+    document.getElementById('pnl').value = '';
+    document.getElementById('notes').value = '';
+    document.getElementById('chartFile').value = '';
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('previewImg').src = '';
+    document.querySelector('.upload-icon').style.display = 'block';
+    document.querySelector('.upload-text').style.display = 'block';
+
+    selectedDir = '';
+    selectedOutcome = '';
+    selectedConcepts = [];
+    imageBase64 = null;
+    imageFileObj = null;
+
+    document.querySelectorAll('.dir-btn, .outcome-btn, .chip').forEach(el => el.classList.remove('active'));
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('btnText').textContent = 'Записать сделку →';
+
+    document.getElementById('successScreen').classList.remove('visible');
+    document.getElementById('formWrap').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
